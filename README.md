@@ -20,37 +20,55 @@ Before running the project, ensure the following:
 ## Setup
 
 ### 1. **Prepare Data**
-Ensure that the invoice data is structured and ready to be loaded into the AP interface tables. This typically involves:
-- Mapping external invoice data to the structure of the EBS AP tables.
-- Ensuring data integrity (correct vendor IDs, valid invoice amounts, etc.).
+
+1. Create the staging table
+- run the SQL script in your preferred IDE of choice
+
+![image](https://github.com/user-attachments/assets/541e426e-ec8a-4c15-b026-f3f94a523c32)
+
+2. Move the Files (*.csv & *.ctl) into the EBS Server with WinSCP application
+- copy the AP17.ctl file into $FND_TOP/bin
+
+  ![image](https://github.com/user-attachments/assets/5fc24058-e0a4-4cf4-bdc3-ffa60479f12d)
+- Copy the AP_DATA_17.csv file into /home/oracle
+  
+  ![image](https://github.com/user-attachments/assets/6c5ef624-1dc8-4f36-9c76-861291fbbaed)
+     
+3. Create the Concurrent Executable
+- Responsibility: Application Developer > Concurrent > Executable
+   ```
+   Executable: Ap_Data_loader_XX
+   Short Name: AP_DL_XX
+   Application: Application Object Library
+   Execution Method: SQL* Loader
+   Execution File Name: AP17 ( referencing AP17.CTL file)
+   File: Save
+![image](https://github.com/user-attachments/assets/ad9acda1-817c-4360-b6ed-2fd014c35bce)
+
+4. Create the Concurrent Program
+   - Responsibility: Application Developer > Concurrent > Program
+   ```
+   Program: AP_Data_Loader_XX
+   Short Name: APDL_XX
+   Application: Application Object Library
+   Executable Name: AP_DL_17
+      
+![image](https://github.com/user-attachments/assets/c4f991c4-c8a7-4430-8098-9a891cafe3be)
+- Parameters(G):
+  ```
+  Seq: 10
+  Parameter: P_DATA_FILE
+  Value Set: 30 Characters
+  Display Size: 30
+  Prompt: P_DATA_FILE
+  LOV Prompt: P_DATA_FILE
+![image](https://github.com/user-attachments/assets/89e63d05-9bf0-41eb-bd6a-b34bed821e43)
+
+
+5. Create a new request for the concurrent program
+   - Responsibility: Application Developer > View > Requests > New Request
+     ![image](https://github.com/user-attachments/assets/44c1e202-97b6-4d6d-9be1-ea7453b81f04)
+
 
 ### 2. **PL/SQL Script for Data Loading**
-The core of this project is the PL/SQL script that loads invoice data into the interface tables. Below is a basic structure for the script:
 
-```sql
-DECLARE
-    -- Declare necessary variables for processing invoices
-BEGIN
-    -- Loop through invoice data and insert into AP interface tables
-    FOR i IN 1..:invoice_count LOOP
-        INSERT INTO AP_INVOICES_INTERFACE
-            (INVOICE_ID, VENDOR_ID, INVOICE_AMOUNT, INVOICE_DATE, ...) 
-        VALUES
-            (:invoice_id(i), :vendor_id(i), :invoice_amount(i), :invoice_date(i), ...);
-        
-        INSERT INTO AP_INVOICE_LINES_INTERFACE
-            (LINE_ID, INVOICE_ID, LINE_AMOUNT, LINE_DESCRIPTION, ...) 
-        VALUES
-            (:line_id(i), :invoice_id(i), :line_amount(i), :line_description(i), ...);
-    END LOOP;
-    
-    -- Commit the transaction to save changes
-    COMMIT;
-    
-EXCEPTION
-    WHEN OTHERS THEN
-        -- Handle errors, rollback if necessary
-        ROLLBACK;
-        -- Log the error
-        DBMS_OUTPUT.PUT_LINE('Error loading invoice data: ' || SQLERRM);
-END;
